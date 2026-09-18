@@ -5,49 +5,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MotionMend AI</title>
     <link rel="stylesheet" href="style.css" />
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦾</text></svg>"
+    />
   </head>
   <body>
+    <div id="loading-overlay" class="overlay">
+      <div class="spinner"></div>
+      <p id="loading-text">Loading AI Model...</p>
+    </div>
+
+    <div id="exercise-selector" class="overlay hidden">
+      <h2>Select Your Exercise</h2>
+      <div class="exercise-cards">
+        <div class="exercise-card" onclick="selectExercise('bicep-curl')">
+          <div class="card-icon">💪</div>
+          <h3>Bicep Curl</h3>
+          <p>Left arm form tracking</p>
+        </div>
+        <div class="exercise-card" onclick="selectExercise('squat')">
+          <div class="card-icon">🦵</div>
+          <h3>Bodyweight Squat</h3>
+          <p>Knee and hip alignment</p>
+        </div>
+        <div class="exercise-card disabled">
+          <div class="card-icon">🏋️</div>
+          <h3>Shoulder Press</h3>
+          <p>Coming in V2</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Summary Overlay -->
+    <div id="session-summary" class="overlay hidden">
+      <div class="summary-card">
+        <h2>Session Complete!</h2>
+        <div class="summary-stats">
+          <div class="summary-item">
+            <span class="summary-label">Total Reps</span>
+            <span class="summary-value" id="summary-reps">0</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Form Accuracy</span>
+            <span class="summary-value" id="summary-accuracy">0%</span>
+          </div>
+        </div>
+        <p id="ai-summary-text" class="ai-summary">Generating AI feedback...</p>
+        <button onclick="location.reload()" class="restart-btn">
+          Start New Session
+        </button>
+      </div>
+    </div>
+
     <header>
       <h1>MotionMend <span class="accent">AI</span></h1>
-      <p id="status-text" class="status">Initializing AI Model...</p>
+      <p id="status-text" class="status">Select an exercise to begin</p>
     </header>
 
     <main>
-      <!-- Left Side: Camera Feed -->
       <div class="video-container">
-        <video id="webcam" autoplay playsinline></video>
+        <video id="webcam" autoplay playsinline muted></video>
         <canvas id="canvas"></canvas>
         <div id="overlay-msg" class="overlay-msg hidden">
           Please step into the frame
         </div>
       </div>
 
-      <!-- Right Side: Dashboard -->
       <div class="dashboard">
-        <div class="stat-box">
+        <div
+          class="stat-box"
+          data-tooltip="Number of successfully completed repetitions"
+        >
           <h3>Repetitions</h3>
           <p id="rep-count" class="big-text">0</p>
         </div>
 
-        <div class="stat-box">
-          <h3>Form Feedback</h3>
+        <div
+          class="stat-box"
+          data-tooltip="Calculated angle of your primary joint"
+        >
+          <h3>Joint Angle</h3>
+          <p id="angle-display" class="big-text angle-text">--°</p>
+        </div>
+
+        <div
+          class="stat-box"
+          data-tooltip="Percentage of reps performed with correct form"
+        >
+          <h3>Form Accuracy</h3>
+          <div class="progress-bar">
+            <div
+              id="accuracy-bar"
+              class="progress-fill"
+              style="width: 0%"
+            ></div>
+          </div>
+          <p id="accuracy-text" class="normal-text">0%</p>
+        </div>
+
+        <div class="stat-box feedback-box">
+          <h3>Live Feedback</h3>
           <p id="form-feedback" class="feedback-text">Get ready...</p>
         </div>
 
-        <div class="stat-box">
-          <h3>Exercise</h3>
-          <p class="normal-text">Left Arm Bicep Curl</p>
+        <div class="button-group">
+          <button id="start-btn" disabled>Start Camera</button>
+          <button id="finish-btn" class="secondary-btn" disabled>
+            Finish Session
+          </button>
         </div>
 
-        <button id="start-btn" disabled>Start Camera</button>
-
         <div class="disclaimer">
-          <p>⚠️ Prototype for DSH Hacks V2. Not a medical device.</p>
+          <p>
+            ⚠️ Prototype for DSH Hacks V2. Not a medical device. Consult a
+            professional.
+          </p>
         </div>
       </div>
     </main>
 
-    <!-- type="module" is REQUIRED for MediaPipe Tasks Vision -->
     <script type="module" src="script.js"></script>
   </body>
 </html>
