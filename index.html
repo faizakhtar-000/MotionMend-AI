@@ -11,23 +11,28 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦾</text></svg>"
     />
   </head>
   <body>
+    <div id="toast-container" class="toast-container"></div>
+
     <div class="bg-gradient"></div>
 
     <div id="loading-overlay" class="overlay">
       <div class="loading-content">
         <div class="logo-mark">🦾</div>
         <h1 class="loading-title">MotionMend <span>AI</span></h1>
-        <div class="loading-bar">
-          <div class="loading-bar-fill"></div>
-        </div>
-        <p id="loading-text" class="loading-subtitle">
+        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+        <p id="loading-text" class="loading-subtitle" data-i18n="loading">
           Initializing neural engine...
         </p>
       </div>
@@ -36,16 +41,18 @@
     <div id="exercise-selector" class="overlay hidden">
       <div class="selector-content">
         <div class="selector-header">
-          <span class="eyebrow">Step 1 of 2</span>
-          <h2>Choose Your Exercise</h2>
-          <p>Select a movement to begin your session</p>
+          <span class="eyebrow" data-i18n="step1">Step 1 of 2</span>
+          <h2 data-i18n="chooseExercise">Choose Your Exercise</h2>
+          <p data-i18n="selectMovement">
+            Select a movement to begin your session
+          </p>
         </div>
         <div class="exercise-cards">
           <div class="exercise-card" onclick="selectExercise('bicep-curl')">
             <div class="card-visual">💪</div>
             <div class="card-content">
-              <h3>Bicep Curl</h3>
-              <p>Upper body · Left arm tracking</p>
+              <h3 data-i18n="bicepCurl">Bicep Curl</h3>
+              <p data-i18n="bicepDesc">Upper body · Left arm tracking</p>
               <span class="card-meta">~3 min session</span>
             </div>
             <div class="card-arrow">→</div>
@@ -53,8 +60,8 @@
           <div class="exercise-card" onclick="selectExercise('squat')">
             <div class="card-visual">🦵</div>
             <div class="card-content">
-              <h3>Bodyweight Squat</h3>
-              <p>Lower body · Knee & hip alignment</p>
+              <h3 data-i18n="squat">Bodyweight Squat</h3>
+              <p data-i18n="squatDesc">Lower body · Knee & hip alignment</p>
               <span class="card-meta">~4 min session</span>
             </div>
             <div class="card-arrow">→</div>
@@ -62,9 +69,9 @@
           <div class="exercise-card disabled">
             <div class="card-visual">🏋️</div>
             <div class="card-content">
-              <h3>Shoulder Press</h3>
-              <p>Coming in MotionMend V2</p>
-              <span class="card-meta">Stay tuned</span>
+              <h3 data-i18n="shoulderPress">Shoulder Press</h3>
+              <p data-i18n="comingSoon">Coming in MotionMend V2</p>
+              <span class="card-meta" data-i18n="stayTuned">Stay tuned</span>
             </div>
             <div class="card-arrow">→</div>
           </div>
@@ -73,39 +80,57 @@
     </div>
 
     <div id="session-summary" class="overlay hidden">
-      <div class="summary-card">
+      <div class="summary-card" id="pdf-capture-area">
         <div class="summary-header">
-          <span class="eyebrow">Session Complete</span>
-          <h2>Great work today 🎉</h2>
+          <span class="eyebrow" data-i18n="sessionComplete"
+            >Session Complete</span
+          >
+          <h2 data-i18n="greatWork">Great work today 🎉</h2>
         </div>
         <div class="summary-stats-grid">
           <div class="summary-stat">
-            <span class="summary-label">Repetitions</span>
+            <span class="summary-label" data-i18n="reps">Repetitions</span>
             <span class="summary-value" id="summary-reps">0</span>
           </div>
           <div class="summary-stat">
-            <span class="summary-label">Accuracy</span>
+            <span class="summary-label" data-i18n="accuracy">Accuracy</span>
             <span class="summary-value" id="summary-accuracy">0%</span>
           </div>
           <div class="summary-stat">
-            <span class="summary-label">Duration</span>
+            <span class="summary-label" data-i18n="duration">Duration</span>
             <span class="summary-value" id="summary-duration">0:00</span>
           </div>
           <div class="summary-stat">
-            <span class="summary-label">Calories</span>
-            <span class="summary-value" id="summary-calories">0</span>
+            <span class="summary-label" data-i18n="peakHR"
+              >Peak Heart Rate</span
+            >
+            <span class="summary-value" id="summary-hr"
+              >0 <span class="unit">BPM</span></span
+            >
           </div>
         </div>
         <div class="ai-feedback">
-          <div class="ai-badge">✨ AI Coach</div>
-          <p id="ai-summary-text">Analyzing your performance...</p>
+          <div class="ai-badge">
+            ✨ <span data-i18n="aiCoach">AI Coach</span>
+          </div>
+          <p id="ai-summary-text" data-i18n="analyzing">
+            Analyzing your performance...
+          </p>
         </div>
         <div class="summary-actions">
-          <button onclick="location.reload()" class="btn-primary">
+          <button
+            onclick="location.reload()"
+            class="btn-primary"
+            data-i18n="newSession"
+          >
             Start New Session
           </button>
-          <button onclick="exportSession()" class="btn-secondary">
-            Export Report
+          <button
+            onclick="exportPDF()"
+            class="btn-secondary"
+            data-i18n="exportPDF"
+          >
+            📄 Export PDF Report
           </button>
         </div>
       </div>
@@ -113,14 +138,33 @@
 
     <div id="settings-panel" class="settings-panel hidden">
       <div class="settings-header">
-        <h3>Settings</h3>
+        <h3 data-i18n="settings">Settings</h3>
         <button onclick="toggleSettings()" class="close-btn">×</button>
       </div>
       <div class="settings-group">
         <div class="setting-item">
           <div>
-            <div class="setting-label">Voice Feedback</div>
-            <div class="setting-desc">Audio cues during exercise</div>
+            <div class="setting-label" data-i18n="language">Language</div>
+          </div>
+          <select
+            id="language-select"
+            class="lang-select"
+            onchange="setLanguage(this.value)"
+          >
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="zh">中文</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label" data-i18n="voiceFeedback">
+              Voice Feedback
+            </div>
+            <div class="setting-desc" data-i18n="voiceDesc">
+              Audio cues during exercise
+            </div>
           </div>
           <label class="toggle">
             <input type="checkbox" id="voice-toggle" checked />
@@ -129,8 +173,12 @@
         </div>
         <div class="setting-item">
           <div>
-            <div class="setting-label">Skeleton Overlay</div>
-            <div class="setting-desc">Show pose tracking lines</div>
+            <div class="setting-label" data-i18n="skeletonOverlay">
+              Skeleton Overlay
+            </div>
+            <div class="setting-desc" data-i18n="skeletonDesc">
+              Show pose tracking lines
+            </div>
           </div>
           <label class="toggle">
             <input type="checkbox" id="skeleton-toggle" checked />
@@ -139,27 +187,15 @@
         </div>
         <div class="setting-item">
           <div>
-            <div class="setting-label">Dark Mode</div>
-            <div class="setting-desc">Easier on the eyes</div>
+            <div class="setting-label" data-i18n="darkMode">Dark Mode</div>
+            <div class="setting-desc" data-i18n="darkDesc">
+              Easier on the eyes
+            </div>
           </div>
           <label class="toggle">
             <input type="checkbox" id="theme-toggle" />
             <span class="toggle-slider"></span>
           </label>
-        </div>
-        <div class="setting-item">
-          <div>
-            <div class="setting-label">Sensitivity</div>
-            <div class="setting-desc">Form strictness level</div>
-          </div>
-          <input
-            type="range"
-            id="sensitivity-slider"
-            min="1"
-            max="3"
-            value="2"
-            class="slider"
-          />
         </div>
       </div>
     </div>
@@ -172,14 +208,20 @@
             <h1>MotionMend <span class="accent">AI</span></h1>
             <div class="live-indicator" id="live-indicator">
               <span class="live-dot"></span>
-              <span class="live-text">Ready</span>
+              <span class="live-text" data-i18n="ready">Ready</span>
             </div>
           </div>
         </div>
         <div class="header-actions">
           <div class="session-timer" id="session-timer">
-            <span class="timer-label">Session</span>
+            <span class="timer-label" data-i18n="session">Session</span>
             <span class="timer-value" id="timer-value">00:00</span>
+          </div>
+
+          <div class="hr-monitor">
+            <span class="hr-icon">❤️</span>
+            <span class="hr-value" id="hr-value">--</span>
+            <span class="hr-unit">BPM</span>
           </div>
           <button onclick="toggleSettings()" class="icon-btn" title="Settings">
             <svg
@@ -206,7 +248,9 @@
         <canvas id="canvas"></canvas>
         <div id="overlay-msg" class="overlay-msg hidden">
           <div class="overlay-icon">📷</div>
-          <div class="overlay-text">Please step into the frame</div>
+          <div class="overlay-text" data-i18n="stepIntoFrame">
+            Please step into the frame
+          </div>
         </div>
         <div class="video-badge" id="video-badge">
           <span class="badge-dot"></span>
@@ -219,19 +263,19 @@
           <div class="stat-card primary" data-tooltip="Completed repetitions">
             <div class="stat-header">
               <span class="stat-icon">🔄</span>
-              <span class="stat-label">Reps</span>
+              <span class="stat-label" data-i18n="reps">Reps</span>
             </div>
             <div class="stat-value odometer" id="rep-count">0</div>
-            <div class="stat-trend" id="rep-trend">Keep going</div>
+            <div class="stat-trend" data-i18n="keepGoing">Keep going</div>
           </div>
 
           <div class="stat-card" data-tooltip="Current joint angle">
             <div class="stat-header">
               <span class="stat-icon">📐</span>
-              <span class="stat-label">Angle</span>
+              <span class="stat-label" data-i18n="angle">Angle</span>
             </div>
             <div class="stat-value angle-value" id="angle-display">--°</div>
-            <div class="stat-trend">Real-time</div>
+            <div class="stat-trend" data-i18n="realtime">Real-time</div>
           </div>
         </div>
 
@@ -241,7 +285,9 @@
         >
           <div class="stat-header">
             <span class="stat-icon">🎯</span>
-            <span class="stat-label">Form Accuracy</span>
+            <span class="stat-label" data-i18n="formAccuracy"
+              >Form Accuracy</span
+            >
             <span class="stat-badge" id="accuracy-badge">0%</span>
           </div>
           <div class="progress-container">
@@ -249,9 +295,9 @@
               <div id="accuracy-bar" class="progress-fill"></div>
             </div>
             <div class="progress-labels">
-              <span>Poor</span>
-              <span>Good</span>
-              <span>Perfect</span>
+              <span data-i18n="poor">Poor</span>
+              <span data-i18n="good">Good</span>
+              <span data-i18n="perfect">Perfect</span>
             </div>
           </div>
         </div>
@@ -259,9 +305,15 @@
         <div class="stat-card feedback-card">
           <div class="stat-header">
             <span class="stat-icon">💬</span>
-            <span class="stat-label">Live Coaching</span>
+            <span class="stat-label" data-i18n="liveCoaching"
+              >Live Coaching</span
+            >
           </div>
-          <p id="form-feedback" class="feedback-text">
+          <p
+            id="form-feedback"
+            class="feedback-text"
+            data-i18n="selectExerciseBegin"
+          >
             Select an exercise to begin
           </p>
         </div>
@@ -269,7 +321,7 @@
         <div class="stat-card chart-card">
           <div class="stat-header">
             <span class="stat-icon">📈</span>
-            <span class="stat-label">Form History</span>
+            <span class="stat-label" data-i18n="formHistory">Form History</span>
           </div>
           <canvas id="history-chart"></canvas>
         </div>
@@ -277,19 +329,24 @@
         <div class="action-buttons">
           <button id="start-btn" disabled class="btn-primary">
             <span class="btn-icon">▶</span>
-            <span>Start Camera</span>
+            <span data-i18n="startCamera">Start Camera</span>
           </button>
           <button id="finish-btn" disabled class="btn-secondary">
-            <span>Finish Session</span>
+            <span data-i18n="finishSession">Finish Session</span>
           </button>
         </div>
 
         <div class="keyboard-hint">
-          <kbd>Space</kbd> Start · <kbd>Esc</kbd> Finish · <kbd>S</kbd> Settings
+          <kbd>Space</kbd> <span data-i18n="start">Start</span> · <kbd>Esc</kbd>
+          <span data-i18n="finish">Finish</span> · <kbd>S</kbd>
+          <span data-i18n="settings">Settings</span>
         </div>
 
         <div class="disclaimer">
-          <p>⚠️ Prototype for DSH Hacks V2 · Not a medical device</p>
+          <p>
+            ⚠️
+            <span data-i18n="disclaimer">Prototype · Not a medical device</span>
+          </p>
         </div>
       </div>
     </main>
