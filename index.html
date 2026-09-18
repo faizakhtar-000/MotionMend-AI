@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MotionMend AI</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>MotionMend <span class="accent">AI</span></h1>
+      <p id="status-text" class="status">Initializing AI Model...</p>
+    </header>
+
+    <main>
+      <!-- Left Side: Camera Feed -->
+      <div class="video-container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div id="overlay-msg" class="overlay-msg hidden">
+          Please step into the frame
+        </div>
+      </div>
+
+      <!-- Right Side: Dashboard -->
+      <div class="dashboard">
+        <div class="stat-box">
+          <h3>Repetitions</h3>
+          <p id="rep-count" class="big-text">0</p>
+        </div>
+
+        <div class="stat-box">
+          <h3>Form Feedback</h3>
+          <p id="form-feedback" class="feedback-text">Get ready...</p>
+        </div>
+
+        <div class="stat-box">
+          <h3>Exercise</h3>
+          <p class="normal-text">Left Arm Bicep Curl</p>
+        </div>
+
+        <button id="start-btn" disabled>Start Camera</button>
+
+        <div class="disclaimer">
+          <p>⚠️ Prototype for DSH Hacks V2. Not a medical device.</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- type="module" is REQUIRED for MediaPipe Tasks Vision -->
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
