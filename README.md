@@ -2,7 +2,7 @@
 
 ### Real-time, browser-based physical therapy form tracking powered by Computer Vision.
 
-**[Try the Live Demo Here](https://motionmend-ai.netlify.app)** *https://github.com/faizakhtar-000/MotionMend-AI*
+\*_GitHub repo link _https://github.com/faizakhtar-000/MotionMend-AI*
 
 ---
 
