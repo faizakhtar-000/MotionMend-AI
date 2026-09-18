@@ -1,67 +1,203 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MotionMend AI</title>
+    <title>MotionMend AI — Intelligent Physical Therapy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦾</text></svg>"
     />
   </head>
   <body>
+    <div class="bg-gradient"></div>
+
     <div id="loading-overlay" class="overlay">
-      <div class="spinner"></div>
-      <p id="loading-text">Loading AI Model...</p>
+      <div class="loading-content">
+        <div class="logo-mark">🦾</div>
+        <h1 class="loading-title">MotionMend <span>AI</span></h1>
+        <div class="loading-bar">
+          <div class="loading-bar-fill"></div>
+        </div>
+        <p id="loading-text" class="loading-subtitle">
+          Initializing neural engine...
+        </p>
+      </div>
     </div>
 
     <div id="exercise-selector" class="overlay hidden">
-      <h2>Select Your Exercise</h2>
-      <div class="exercise-cards">
-        <div class="exercise-card" onclick="selectExercise('bicep-curl')">
-          <div class="card-icon">💪</div>
-          <h3>Bicep Curl</h3>
-          <p>Left arm form tracking</p>
+      <div class="selector-content">
+        <div class="selector-header">
+          <span class="eyebrow">Step 1 of 2</span>
+          <h2>Choose Your Exercise</h2>
+          <p>Select a movement to begin your session</p>
         </div>
-        <div class="exercise-card" onclick="selectExercise('squat')">
-          <div class="card-icon">🦵</div>
-          <h3>Bodyweight Squat</h3>
-          <p>Knee and hip alignment</p>
-        </div>
-        <div class="exercise-card disabled">
-          <div class="card-icon">🏋️</div>
-          <h3>Shoulder Press</h3>
-          <p>Coming in V2</p>
+        <div class="exercise-cards">
+          <div class="exercise-card" onclick="selectExercise('bicep-curl')">
+            <div class="card-visual">💪</div>
+            <div class="card-content">
+              <h3>Bicep Curl</h3>
+              <p>Upper body · Left arm tracking</p>
+              <span class="card-meta">~3 min session</span>
+            </div>
+            <div class="card-arrow">→</div>
+          </div>
+          <div class="exercise-card" onclick="selectExercise('squat')">
+            <div class="card-visual">🦵</div>
+            <div class="card-content">
+              <h3>Bodyweight Squat</h3>
+              <p>Lower body · Knee & hip alignment</p>
+              <span class="card-meta">~4 min session</span>
+            </div>
+            <div class="card-arrow">→</div>
+          </div>
+          <div class="exercise-card disabled">
+            <div class="card-visual">🏋️</div>
+            <div class="card-content">
+              <h3>Shoulder Press</h3>
+              <p>Coming in MotionMend V2</p>
+              <span class="card-meta">Stay tuned</span>
+            </div>
+            <div class="card-arrow">→</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Session Summary Overlay -->
     <div id="session-summary" class="overlay hidden">
       <div class="summary-card">
-        <h2>Session Complete!</h2>
-        <div class="summary-stats">
-          <div class="summary-item">
-            <span class="summary-label">Total Reps</span>
+        <div class="summary-header">
+          <span class="eyebrow">Session Complete</span>
+          <h2>Great work today 🎉</h2>
+        </div>
+        <div class="summary-stats-grid">
+          <div class="summary-stat">
+            <span class="summary-label">Repetitions</span>
             <span class="summary-value" id="summary-reps">0</span>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">Form Accuracy</span>
+          <div class="summary-stat">
+            <span class="summary-label">Accuracy</span>
             <span class="summary-value" id="summary-accuracy">0%</span>
           </div>
+          <div class="summary-stat">
+            <span class="summary-label">Duration</span>
+            <span class="summary-value" id="summary-duration">0:00</span>
+          </div>
+          <div class="summary-stat">
+            <span class="summary-label">Calories</span>
+            <span class="summary-value" id="summary-calories">0</span>
+          </div>
         </div>
-        <p id="ai-summary-text" class="ai-summary">Generating AI feedback...</p>
-        <button onclick="location.reload()" class="restart-btn">
-          Start New Session
-        </button>
+        <div class="ai-feedback">
+          <div class="ai-badge">✨ AI Coach</div>
+          <p id="ai-summary-text">Analyzing your performance...</p>
+        </div>
+        <div class="summary-actions">
+          <button onclick="location.reload()" class="btn-primary">
+            Start New Session
+          </button>
+          <button onclick="exportSession()" class="btn-secondary">
+            Export Report
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-panel" class="settings-panel hidden">
+      <div class="settings-header">
+        <h3>Settings</h3>
+        <button onclick="toggleSettings()" class="close-btn">×</button>
+      </div>
+      <div class="settings-group">
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Voice Feedback</div>
+            <div class="setting-desc">Audio cues during exercise</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="voice-toggle" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Skeleton Overlay</div>
+            <div class="setting-desc">Show pose tracking lines</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="skeleton-toggle" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Dark Mode</div>
+            <div class="setting-desc">Easier on the eyes</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="theme-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Sensitivity</div>
+            <div class="setting-desc">Form strictness level</div>
+          </div>
+          <input
+            type="range"
+            id="sensitivity-slider"
+            min="1"
+            max="3"
+            value="2"
+            class="slider"
+          />
+        </div>
       </div>
     </div>
 
     <header>
-      <h1>MotionMend <span class="accent">AI</span></h1>
-      <p id="status-text" class="status">Select an exercise to begin</p>
+      <div class="header-content">
+        <div class="brand">
+          <span class="brand-icon">🦾</span>
+          <div class="brand-text">
+            <h1>MotionMend <span class="accent">AI</span></h1>
+            <div class="live-indicator" id="live-indicator">
+              <span class="live-dot"></span>
+              <span class="live-text">Ready</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="session-timer" id="session-timer">
+            <span class="timer-label">Session</span>
+            <span class="timer-value" id="timer-value">00:00</span>
+          </div>
+          <button onclick="toggleSettings()" class="icon-btn" title="Settings">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </div>
     </header>
 
     <main>
@@ -69,59 +205,91 @@
         <video id="webcam" autoplay playsinline muted></video>
         <canvas id="canvas"></canvas>
         <div id="overlay-msg" class="overlay-msg hidden">
-          Please step into the frame
+          <div class="overlay-icon">📷</div>
+          <div class="overlay-text">Please step into the frame</div>
+        </div>
+        <div class="video-badge" id="video-badge">
+          <span class="badge-dot"></span>
+          <span id="exercise-name">Bicep Curl</span>
         </div>
       </div>
 
       <div class="dashboard">
-        <div
-          class="stat-box"
-          data-tooltip="Number of successfully completed repetitions"
-        >
-          <h3>Repetitions</h3>
-          <p id="rep-count" class="big-text">0</p>
-        </div>
-
-        <div
-          class="stat-box"
-          data-tooltip="Calculated angle of your primary joint"
-        >
-          <h3>Joint Angle</h3>
-          <p id="angle-display" class="big-text angle-text">--°</p>
-        </div>
-
-        <div
-          class="stat-box"
-          data-tooltip="Percentage of reps performed with correct form"
-        >
-          <h3>Form Accuracy</h3>
-          <div class="progress-bar">
-            <div
-              id="accuracy-bar"
-              class="progress-fill"
-              style="width: 0%"
-            ></div>
+        <div class="stats-row">
+          <div class="stat-card primary" data-tooltip="Completed repetitions">
+            <div class="stat-header">
+              <span class="stat-icon">🔄</span>
+              <span class="stat-label">Reps</span>
+            </div>
+            <div class="stat-value odometer" id="rep-count">0</div>
+            <div class="stat-trend" id="rep-trend">Keep going</div>
           </div>
-          <p id="accuracy-text" class="normal-text">0%</p>
+
+          <div class="stat-card" data-tooltip="Current joint angle">
+            <div class="stat-header">
+              <span class="stat-icon">📐</span>
+              <span class="stat-label">Angle</span>
+            </div>
+            <div class="stat-value angle-value" id="angle-display">--°</div>
+            <div class="stat-trend">Real-time</div>
+          </div>
         </div>
 
-        <div class="stat-box feedback-box">
-          <h3>Live Feedback</h3>
-          <p id="form-feedback" class="feedback-text">Get ready...</p>
+        <div
+          class="stat-card accuracy-card"
+          data-tooltip="Form quality percentage"
+        >
+          <div class="stat-header">
+            <span class="stat-icon">🎯</span>
+            <span class="stat-label">Form Accuracy</span>
+            <span class="stat-badge" id="accuracy-badge">0%</span>
+          </div>
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div id="accuracy-bar" class="progress-fill"></div>
+            </div>
+            <div class="progress-labels">
+              <span>Poor</span>
+              <span>Good</span>
+              <span>Perfect</span>
+            </div>
+          </div>
         </div>
 
-        <div class="button-group">
-          <button id="start-btn" disabled>Start Camera</button>
-          <button id="finish-btn" class="secondary-btn" disabled>
-            Finish Session
+        <div class="stat-card feedback-card">
+          <div class="stat-header">
+            <span class="stat-icon">💬</span>
+            <span class="stat-label">Live Coaching</span>
+          </div>
+          <p id="form-feedback" class="feedback-text">
+            Select an exercise to begin
+          </p>
+        </div>
+
+        <div class="stat-card chart-card">
+          <div class="stat-header">
+            <span class="stat-icon">📈</span>
+            <span class="stat-label">Form History</span>
+          </div>
+          <canvas id="history-chart"></canvas>
+        </div>
+
+        <div class="action-buttons">
+          <button id="start-btn" disabled class="btn-primary">
+            <span class="btn-icon">▶</span>
+            <span>Start Camera</span>
+          </button>
+          <button id="finish-btn" disabled class="btn-secondary">
+            <span>Finish Session</span>
           </button>
         </div>
 
+        <div class="keyboard-hint">
+          <kbd>Space</kbd> Start · <kbd>Esc</kbd> Finish · <kbd>S</kbd> Settings
+        </div>
+
         <div class="disclaimer">
-          <p>
-            ⚠️ Prototype for DSH Hacks V2. Not a medical device. Consult a
-            professional.
-          </p>
+          <p>⚠️ Prototype for DSH Hacks V2 · Not a medical device</p>
         </div>
       </div>
     </main>

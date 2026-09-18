@@ -4,7 +4,7 @@ const ctx = canvas.getContext("2d");
 const repCountEl = document.getElementById("rep-count");
 const angleDisplayEl = document.getElementById("angle-display");
 const accuracyBarEl = document.getElementById("accuracy-bar");
-const accuracyTextEl = document.getElementById("accuracy-text");
+const accuracyBadgeEl = document.getElementById("accuracy-badge");
 const feedbackEl = document.getElementById("form-feedback");
 const statusEl = document.getElementById("status-text");
 const startBtn = document.getElementById("start-btn");
@@ -12,16 +12,22 @@ const finishBtn = document.getElementById("finish-btn");
 const overlayMsg = document.getElementById("overlay-msg");
 const loadingOverlay = document.getElementById("loading-overlay");
 const loadingText = document.getElementById("loading-text");
+const timerValueEl = document.getElementById("timer-value");
+const liveIndicator = document.getElementById("live-indicator");
+const exerciseNameEl = document.getElementById("exercise-name");
 
 let poseLandmarker;
 let running = false;
 let repCount = 0;
 let formState = "DOWN";
-let skeletonColor = "#2A9D8F";
+let skeletonColor = "#30d158";
 let selectedExercise = "bicep-curl";
 
 let totalReps = 0;
 let goodFormReps = 0;
+let accuracyHistory = [];
+let sessionStartTime = null;
+let timerInterval = null;
 
 const UP_THRESHOLD = 50;
 const DOWN_THRESHOLD = 160;
@@ -30,8 +36,14 @@ const MP_CDN_URL =
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 let PoseLandmarker, FilesetResolver, DrawingUtils;
 
+let settings = {
+  voice: true,
+  skeleton: true,
+  sensitivity: 2, //
+};
+
 async function initModel() {
-  loadingText.innerText = "Loading AI Model (This may take a few seconds)...";
+  loadingText.innerText = "Loading neural engine...";
 
   try {
     const vision = await import(MP_CDN_URL);
@@ -39,6 +51,7 @@ async function initModel() {
     FilesetResolver = vision.FilesetResolver;
     DrawingUtils = vision.DrawingUtils;
 
+    loadingText.innerText = "Downloading pose model...";
     const filesetResolver = await FilesetResolver.forVisionTasks(
       `${MP_CDN_URL}/wasm`,
     );
@@ -62,18 +75,27 @@ async function initModel() {
 }
 
 function selectExercise(exercise) {
-  if (exercise === "shoulder-press") return; // Disabled
+  if (exercise === "shoulder-press") return;
 
   selectedExercise = exercise;
+  const exerciseNames = {
+    "bicep-curl": "Bicep Curl",
+    squat: "Bodyweight Squat",
+  };
+  exerciseNameEl.innerText = exerciseNames[exercise];
+
   document.getElementById("exercise-selector").classList.add("hidden");
-  statusEl.innerText = `Ready for ${exercise === "bicep-curl" ? "Left Arm Bicep Curl" : "Bodyweight Squat"}. Click Start Camera.`;
   startBtn.disabled = false;
+  feedbackEl.innerText = "Ready when you are";
+  updateLiveIndicator("Ready", "var(--success)");
 }
 
 async function startCamera() {
   try {
-    statusEl.innerText = "Requesting camera access...";
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    updateLiveIndicator("Starting...", "var(--warning)");
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 1280, height: 720 },
+    });
     video.srcObject = stream;
 
     video.onloadedmetadata = () => {
@@ -81,17 +103,23 @@ async function startCamera() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         running = true;
-        statusEl.innerText = "Tracking active. Perform the exercise.";
         startBtn.disabled = true;
-        startBtn.innerText = "Camera Active";
+        startBtn.innerHTML =
+          '<span class="btn-icon">●</span><span>Recording</span>';
         finishBtn.disabled = false;
+
+        sessionStartTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+
+        updateLiveIndicator("Live", "var(--success)");
+        feedbackEl.innerText = "Begin your exercise";
         predictWebcam();
       });
     };
   } catch (err) {
     console.error("Camera error:", err);
-    statusEl.innerText = "Error: Camera access denied or not found.";
-    alert("Please allow camera access in your browser settings.");
+    updateLiveIndicator("Error", "var(--error)");
+    feedbackEl.innerText = "Camera access denied";
   }
 }
 
@@ -104,57 +132,59 @@ async function predictWebcam() {
     const results = poseLandmarker.detectForVideo(video, performance.now());
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const drawingUtils = new DrawingUtils(ctx);
 
-    if (results.landmarks && results.landmarks.length > 0) {
-      overlayMsg.classList.add("hidden");
-      const landmark = results.landmarks[0];
+    if (settings.skeleton) {
+      const drawingUtils = new DrawingUtils(ctx);
 
-      drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, {
-        color: skeletonColor,
-        lineWidth: 5,
-      });
-      drawingUtils.drawLandmarks(landmark, {
-        color: skeletonColor,
-        lineWidth: 1,
-        fillColor: "#fff",
-        radius: 6,
-      });
+      if (results.landmarks && results.landmarks.length > 0) {
+        overlayMsg.classList.add("hidden");
+        const landmark = results.landmarks[0];
 
-      let angle = 0;
-      let isVisible = false;
+        drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, {
+          color: skeletonColor,
+          lineWidth: 4,
+        });
+        drawingUtils.drawLandmarks(landmark, {
+          color: skeletonColor,
+          lineWidth: 1,
+          fillColor: "#fff",
+          radius: 5,
+        });
 
-      if (selectedExercise === "bicep-curl") {
-        const shoulder = landmark[11],
-          elbow = landmark[13],
-          wrist = landmark[15];
-        isVisible =
-          shoulder.visibility > 0.6 &&
-          elbow.visibility > 0.6 &&
-          wrist.visibility > 0.6;
-        if (isVisible) angle = calculateAngle(shoulder, elbow, wrist);
-      } else if (selectedExercise === "squat") {
-        const hip = landmark[23],
-          knee = landmark[25],
-          ankle = landmark[27]; // Left leg
-        isVisible =
-          hip.visibility > 0.6 &&
-          knee.visibility > 0.6 &&
-          ankle.visibility > 0.6;
-        if (isVisible) angle = calculateAngle(hip, knee, ankle);
-      }
+        let angle = 0;
+        let isVisible = false;
 
-      if (isVisible) {
-        updateFormAndReps(angle);
+        if (selectedExercise === "bicep-curl") {
+          const shoulder = landmark[11],
+            elbow = landmark[13],
+            wrist = landmark[15];
+          isVisible =
+            shoulder.visibility > 0.6 &&
+            elbow.visibility > 0.6 &&
+            wrist.visibility > 0.6;
+          if (isVisible) angle = calculateAngle(shoulder, elbow, wrist);
+        } else if (selectedExercise === "squat") {
+          const hip = landmark[23],
+            knee = landmark[25],
+            ankle = landmark[27];
+          isVisible =
+            hip.visibility > 0.6 &&
+            knee.visibility > 0.6 &&
+            ankle.visibility > 0.6;
+          if (isVisible) angle = calculateAngle(hip, knee, ankle);
+        }
+
+        if (isVisible) {
+          updateFormAndReps(angle);
+        } else {
+          overlayMsg.classList.remove("hidden");
+          feedbackEl.innerText = "Step back to show full body";
+          feedbackEl.style.color = "var(--error)";
+        }
       } else {
         overlayMsg.classList.remove("hidden");
-        overlayMsg.innerText = "Step back / Show full body";
-        feedbackEl.innerText = "Tracking lost...";
-        feedbackEl.style.color = "#E63946";
+        feedbackEl.innerText = "No person detected";
       }
-    } else {
-      overlayMsg.classList.remove("hidden");
-      overlayMsg.innerText = "No person detected.";
     }
   }
   window.requestAnimationFrame(predictWebcam);
@@ -173,36 +203,47 @@ function updateFormAndReps(angle) {
 
   if (angle < UP_THRESHOLD && formState === "DOWN") {
     formState = "UP";
-    skeletonColor = "#2A9D8F";
-    feedbackEl.innerText = "Great! Lower it down slowly.";
-    feedbackEl.style.color = "#2A9D8F";
+    skeletonColor = "var(--success)";
+    feedbackEl.innerText = "Great! Lower it down slowly";
+    feedbackEl.style.color = "var(--success)";
   } else if (angle > DOWN_THRESHOLD && formState === "UP") {
     formState = "DOWN";
     repCount++;
     totalReps++;
 
-    if (skeletonColor === "#2A9D8F") goodFormReps++;
+    if (skeletonColor === "var(--success)" || skeletonColor === "#30d158") {
+      goodFormReps++;
+    }
 
     const accuracy = Math.round((goodFormReps / totalReps) * 100);
     accuracyBarEl.style.width = accuracy + "%";
-    accuracyTextEl.innerText = accuracy + "%";
+    accuracyBadgeEl.innerText = accuracy + "%";
+
+    if (repCount % 3 === 0) {
+      accuracyHistory.push(accuracy);
+      updateChart();
+    }
 
     repCountEl.innerText = repCount;
-    skeletonColor = "#2A9D8F";
-    feedbackEl.innerText = "Perfect rep!";
-    feedbackEl.style.color = "#2A9D8F";
+    repCountEl.classList.remove("bounce");
+    void repCountEl.offsetWidth;
+    repCountEl.classList.add("bounce");
 
-    speakFeedback("Perfect repetition");
+    skeletonColor = "var(--success)";
+    feedbackEl.innerText = "Perfect rep!";
+    feedbackEl.style.color = "var(--success)";
+
+    if (settings.voice) speakFeedback("Perfect");
   } else {
-    if (formState === "DOWN") feedbackEl.innerText = "Lift up.";
-    else feedbackEl.innerText = "Lower down.";
+    if (formState === "DOWN") feedbackEl.innerText = "Lift up";
+    else feedbackEl.innerText = "Lower down";
 
     if (angle < 30 && formState === "UP") {
-      skeletonColor = "#E63946";
-      feedbackEl.innerText = "Don't cheat! Control the movement.";
-      feedbackEl.style.color = "#E63946";
+      skeletonColor = "var(--error)";
+      feedbackEl.innerText = "Control the movement";
+      feedbackEl.style.color = "var(--error)";
     } else {
-      skeletonColor = "#0077B6";
+      skeletonColor = "var(--accent)";
     }
   }
 }
@@ -213,32 +254,174 @@ function speakFeedback(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.1;
     utterance.pitch = 1;
+    utterance.volume = 0.7;
     window.speechSynthesis.speak(utterance);
   }
 }
 
-finishBtn.addEventListener("click", () => {
+function updateTimer() {
+  if (!sessionStartTime) return;
+  const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+  const minutes = Math.floor(elapsed / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (elapsed % 60).toString().padStart(2, "0");
+  timerValueEl.innerText = `${minutes}:${seconds}`;
+}
+
+let historyChart;
+function initChart() {
+  const ctx = document.getElementById("history-chart").getContext("2d");
+  historyChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          data: [],
+          borderColor: "rgb(0, 113, 227)",
+          backgroundColor: "rgba(0, 113, 227, 0.1)",
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(0,0,0,0.8)",
+          padding: 10,
+          cornerRadius: 8,
+          titleFont: { size: 11 },
+          bodyFont: { size: 13, weight: "bold" },
+        },
+      },
+      scales: {
+        x: { display: false },
+        y: {
+          display: false,
+          min: 0,
+          max: 100,
+        },
+      },
+      interaction: {
+        intersect: false,
+        mode: "index",
+      },
+    },
+  });
+}
+
+function updateChart() {
+  if (!historyChart) return;
+  historyChart.data.labels = accuracyHistory.map((_, i) => `R${(i + 1) * 3}`);
+  historyChart.data.datasets[0].data = accuracyHistory;
+  historyChart.update("none");
+}
+
+function updateLiveIndicator(text, color) {
+  const dot = liveIndicator.querySelector(".live-dot");
+  const textEl = liveIndicator.querySelector(".live-text");
+  dot.style.background = color;
+  textEl.innerText = text;
+}
+
+function toggleSettings() {
+  document.getElementById("settings-panel").classList.toggle("hidden");
+}
+
+document.getElementById("voice-toggle").addEventListener("change", (e) => {
+  settings.voice = e.target.checked;
+});
+
+document.getElementById("skeleton-toggle").addEventListener("change", (e) => {
+  settings.skeleton = e.target.checked;
+  if (!settings.skeleton) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+});
+
+document.getElementById("theme-toggle").addEventListener("change", (e) => {
+  document.documentElement.setAttribute(
+    "data-theme",
+    e.target.checked ? "dark" : "light",
+  );
+});
+
+document.getElementById("sensitivity-slider").addEventListener("input", (e) => {
+  settings.sensitivity = parseInt(e.target.value);
+});
+
+finishBtn.addEventListener("click", finishSession);
+
+function finishSession() {
   running = false;
+  clearInterval(timerInterval);
+
+  const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
   const accuracy =
     totalReps > 0 ? Math.round((goodFormReps / totalReps) * 100) : 0;
+  const calories = Math.round((elapsed / 60) * 5);
 
   document.getElementById("summary-reps").innerText = repCount;
   document.getElementById("summary-accuracy").innerText = accuracy + "%";
+  document.getElementById("summary-duration").innerText =
+    `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  document.getElementById("summary-calories").innerText = calories;
 
   let aiText = "";
-  if (accuracy >= 80)
+  if (accuracy >= 85)
     aiText =
-      "Excellent work! Your form was highly consistent. Keep up the great control and tempo.";
+      "Outstanding form consistency. Your controlled tempo and full range of motion show excellent body awareness. Keep this precision up.";
+  else if (accuracy >= 70)
+    aiText =
+      "Solid performance with good technique. Focus on maintaining alignment through the full movement for even better results.";
   else if (accuracy >= 50)
     aiText =
-      "Good effort! Try to focus on controlling the movement and hitting the full range of motion.";
+      "Good effort today. Try slowing down the eccentric phase and ensure you're hitting full range of motion on each rep.";
   else
     aiText =
-      "Keep practicing! Make sure to step back so the camera can see your full body, and move at a steady pace.";
+      "Every session is a step forward. Focus on quality over quantity — slower, more controlled reps will build better movement patterns.";
 
-  document.getElementById("ai-summary-text").innerText = `"${aiText}"`;
+  document.getElementById("ai-summary-text").innerText = aiText;
   document.getElementById("session-summary").classList.remove("hidden");
+}
+
+function exportSession() {
+  const accuracy =
+    totalReps > 0 ? Math.round((goodFormReps / totalReps) * 100) : 0;
+  const report = `MotionMend AI Session Report\n\nReps: ${repCount}\nAccuracy: ${accuracy}%\nExercise: ${selectedExercise}\nDate: ${new Date().toLocaleDateString()}`;
+  const blob = new Blob([report], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `motionmend-session-${Date.now()}.txt`;
+  a.click();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !startBtn.disabled) {
+    e.preventDefault();
+    startCamera();
+  } else if (e.code === "Escape" && !finishBtn.disabled) {
+    finishSession();
+  } else if (e.code === "KeyS") {
+    toggleSettings();
+  }
 });
 
-startBtn.addEventListener("click", startCamera);
+window.selectExercise = selectExercise;
+window.toggleSettings = toggleSettings;
+window.finishSession = finishSession;
+window.exportSession = exportSession;
+
+initChart();
 initModel();
